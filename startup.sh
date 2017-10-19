@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
-cd /Volumes/development/foxy/foxycli
-/Users/mozilla/.nvm/versions/node/v7.7.2/bin/node start.js
+
+source $HOME/.nvm/nvm.sh
+$(nvm which 7.0) $HOME/.foxy/start.js

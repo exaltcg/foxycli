@@ -1,6 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 'use strict';
 const rp = require('request-promise');
@@ -14,7 +14,6 @@ var SpotifyConn= require('./spotify');
 var logger = new Logger('debug', 'error', 'foxy.log');
 
 var gaVisitor = '';
-
 
 function Parser() {
 }
@@ -173,8 +172,8 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
             payload.utterance = cleanSpeech(payload);
             
             gaVisitor.event(foxycmd, payload.cmd, payload.param).send();
-    
             shimOptions.body = JSON.stringify(payload);
+            
             return rp(shimOptions);
           })
           .catch(function(err) {
@@ -201,8 +200,8 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
       }
     })
     .then(function() {
-       callback('ok');
-       logger.log('debug','finished the chain');
+      callback('ok');
+      logger.log('debug','finished the chain');
     })
     .catch(function(err) {
       callback('error');
