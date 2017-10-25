@@ -4,14 +4,20 @@
 
 'use strict';
 const rp = require('request-promise');
-const Logger = require('filelogger');
 const robot = require('robotjs');
 const uuidv4 =  require('uuid/v4');
 const foxycmd = 'foxycmd';
 const foxycmderror = 'foxycmderror';
 var SpotifyConn= require('./spotify');
 
-var logger = new Logger('debug', 'error', 'foxy.log');
+var logOpts = {
+  logDirectory: __dirname ,
+  fileNamePattern: 'foxy-<date>.log',
+  dateFormat:'YYYY.MM.DD-HHa'
+};
+
+var logger = require('simple-node-logger').createRollingFileLogger(logOpts);
+logger.setLevel('debug');
 
 var gaVisitor = '';
 
@@ -82,7 +88,7 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
       const resBody = body && body.toString('utf8');
       var jsonResults = JSON.parse(resBody);
       if (jsonResults.status != 'ok') {
-        logger.log('debug','Kaldi failed:' + jsonResults.status);
+        logger.debug('Kaldi failed:' + jsonResults.status);
       } 
 
       // Get results from Kaldi Speech rec. Format for Api.ai
@@ -118,7 +124,7 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
             return rp(shimOptions);
           })
           .catch(function(err) {
-            logger.log('debug', 'Spotify error:' + err);
+            logger.debug('Spotify error:' + err);
             callback('Spotify error');
           });
       } else if (payload.cmd == FOXY_COMMANDS.IOT) {
@@ -146,14 +152,14 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
           
         rp(iotOptions)
           .then(function(body) {
-            logger.log('debug', 'body is:' + body);
+            logger.debug('body is:' + body);
             shimOptions.body = JSON.stringify(payload);
             payload.utterance = cleanSpeech(payload);
             shimOptions.body = JSON.stringify(payload);
             return rp(shimOptions);
           })
           .catch(function(err) {
-            logger.log('debug', 'iot error is:' + err);
+            logger.debug('iot error is:' + err);
             gaVisitor.event(foxycmderror, payload.cmd, 
               payload.utterance).send();
             callback('iot error');
@@ -177,7 +183,7 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
             return rp(shimOptions);
           })
           .catch(function(err) {
-            logger.log('debug', 'weather error is:' + err);
+            logger.debug('weather error is:' + err);
             gaVisitor.event(foxycmderror, payload.cmd, 
               payload.utterance).send();
             callback('weather error');
@@ -206,20 +212,20 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
     .catch(function(err) {
       callback('error');
       gaVisitor.exception('Kaldi failed ' + err);
-      logger.log('debug','Call failed' + err);
+      logger.debug('Call failed' + err);
     });
 }
 
 function parseSpotify(body) {
   const resBody = body && body.toString('utf8');
-  logger.log('debug','GOT DATA FROM SPOTIFY');
+  logger.debug('GOT DATA FROM SPOTIFY');
   var jsonResults = JSON.parse(resBody);
   let plArray = jsonResults.playlists.items;
   var playlistId = '';
   for(var i = 0; i < plArray.length; i++) {
     var obj = plArray[i];
     if (obj.type == 'playlist') {
-      logger.log('debug','Found a playlist: ' + obj.id);
+      logger.debug('Found a playlist: ' + obj.id);
       playlistId = obj.id;
       break;
     }
@@ -255,16 +261,16 @@ function parseAIBody(aiBody) {
     param2: 'none',
   };
 
-  logger.log('debug', aiBody);
+  logger.debug(aiBody);
   //Determine the action from the API.AI intent parser
   switch (jsonBody.result.action) {
     case 'weather':
-      logger.log('debug','weather is action');
+      logger.debug('weather is action');
       payload.cmd = FOXY_COMMANDS.WEATHER;
       payload.param = jsonBody.result.parameters['geo-city'];
       break;
     case 'timer':
-      logger.log('debug','timer is action');
+      logger.debug('timer is action');
       payload.cmd = FOXY_COMMANDS.TIMER;
       payload.param = parseTimer(jsonBody.result);
       payload.param2 = jsonBody.result.parameters.any;
@@ -330,7 +336,7 @@ function getAiBody(asrBody) {
 }
 
 function parseTimer(result) {
-  logger.log('debug', 'Entering parseTimer');
+  logger.debug('Entering parseTimer');
   var durationSecs = 0;
   if (!result.parameters.duration) {
     return durationSecs;
