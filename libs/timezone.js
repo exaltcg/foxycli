@@ -2,6 +2,8 @@ const request = require('request-promise');
 
 const GOOGLE_API = 'AIzaSyA5W_Ilofq13teL2EDRclCPIbsjZTPyUlM';
 
+const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 class Timezone {
 
   getLocaltime(coords) {
@@ -15,7 +17,10 @@ class Timezone {
       const utc = now.getTime() + now.getTimezoneOffset() * 60000;
       const date = new Date(utc + data.rawOffset * 1000);
       const hours = ('0' + date.getHours()).slice(-2);
-      return `${hours}:${date.getMinutes()}`;
+      return {
+        time: `${hours}:${date.getMinutes()}`,
+        day: days[date.getDay()]
+      };
     });
   }
 }
