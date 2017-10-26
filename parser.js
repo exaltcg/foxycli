@@ -212,7 +212,7 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
     })
     .then(function() {
       callback('ok');
-      logger.log('debug','finished the chain');
+      logger.debug('finished the chain');
     })
     .catch(function(err) {
       callback('error');
