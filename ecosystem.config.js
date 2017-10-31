@@ -7,7 +7,7 @@ module.exports = {
     {
       name: 'Foxy Client Extension',
       script: 'index.js',
-      cron_restart: '*/10 * * * *'
+      cron_restart: '*/3 * * * *'
     }
   ]
 };
