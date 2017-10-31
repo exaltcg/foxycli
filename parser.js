@@ -21,12 +21,14 @@ var logger = require('simple-node-logger').createRollingFileLogger(logOpts);
 logger.setLevel('debug');
 
 var gaVisitor = '';
+var gUuid = '';
 
 function Parser() {
 }
 
-Parser.prototype.setMetrics = function(visitor) {
+Parser.prototype.setMetrics = function(visitor, uuid) {
   gaVisitor = visitor;
+  gUuid = uuid;
 }
 
 const FOXY_COMMANDS = {
@@ -82,6 +84,12 @@ const shimOptions = {
 Parser.prototype.parseResults = function(foxyBuffer, callback) {
   asrOptions.body = foxyBuffer;
   var utterance = '';
+  var ga_params = {
+    ec: foxycmd,
+    uid: gUuid,
+    cd1: gUuid
+  };
+  
 
   // Send the speech buffer to Kaldi
   rp(asrOptions)
@@ -101,7 +109,7 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
       return rp(aiOptions);
     })
     .then(function(aiBody) {
-      var payload = parseAIBody(aiBody);
+      var payload = parseAIBody(aiBody, utterance);
       payload.utterance = utterance;
       if(payload.cmd == FOXY_COMMANDS.SPOTIFY) {
         let playlistBrowseUri = 'https://api.spotify.com/v1/browse/categories/'
@@ -117,10 +125,14 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
             payload.utterance = cleanSpeech(payload);
             shimOptions.body = JSON.stringify(payload);
             if (payload.param == '') {
-              gaVisitor.event(foxycmderror, FOXY_COMMANDS.SPOTIFY, 
-                payload.utterance).send();
+              ga_params.ec = 'foxycmderror';
+              ga_params.ea = payload.cmd;
+              ga_params.el = payload.utterance;
+              gaVisitor.event(ga_params).send();
             } else {
-              gaVisitor.event(foxycmd, payload.cmd, payload.param).send();
+              ga_params.ea = payload.cmd;
+              ga_params.el = payload.param;
+              gaVisitor.event(ga_params).send();
             }
             return rp(shimOptions);
           })
@@ -148,8 +160,10 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
         (payload.param2 == 'on')?
           iotOptions.body = JSON.stringify({'on': true}):
           iotOptions.body = JSON.stringify({'on': false});
-        gaVisitor.event(foxycmd, payload.cmd, payload.param,
-          (iotOptions ? 0 : 1)).send();
+        ga_params.ea = payload.cmd;
+        ga_params.el = payload.param;
+        ga_params.ev = (iotOptions ? 0 : 1);
+        gaVisitor.event(ga_params).send();
           
         rp(iotOptions)
           .then(function(body) {
@@ -161,8 +175,10 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
           })
           .catch(function(err) {
             logger.debug('iot error is:' + err);
-            gaVisitor.event(foxycmderror, payload.cmd, 
-              payload.utterance).send();
+            ga_params.ec = foxycmderror;
+            ga_params.ea = payload.cmd;
+            ga_params.el = payload.utterance;
+            gaVisitor.event(ga_params).send();
             callback('iot error');
           });
       } else if (payload.cmd == FOXY_COMMANDS.WEATHER) {
@@ -184,24 +200,34 @@ Parser.prototype.parseResults = function(foxyBuffer, callback) {
           })
           .then(time => {
             payload.localTime = time;
+            
+            ga_params.ea = payload.cmd;
+            ga_params.el = payload.param;
+            gaVisitor.event(ga_params).send();
+    
             shimOptions.body = JSON.stringify(payload);
             return rp(shimOptions);
           })
           .catch(function(err) {
             logger.debug('weather error is:' + err);
-            gaVisitor.event(foxycmderror, payload.cmd, 
-              payload.utterance).send();
+            ga_params.ec = foxycmderror;
+            ga_params.ea = payload.cmd;
+            ga_params.el = payload.utterance;
+            gaVisitor.event(ga_params).send();
             callback('weather error');
           });
       } else if(payload.cmd == FOXY_COMMANDS.NEXTSLIDE || 
           payload.cmd == FOXY_COMMANDS.PREVIOUSSLIDE) {
-        gaVisitor.event(foxycmd, payload.cmd).send();
+        ga_params.ea = payload.cmd;
+        gaVisitor.event(ga_params).send();
         callback('ok');
       } else {
         payload.utterance = cleanSpeech(payload);
         shimOptions.body = JSON.stringify(payload);
         if (payload.cmd == FOXY_COMMANDS.NONE) {
-          gaVisitor.event(foxycmd, payload.cmd, payload.utterance).send();
+          ga_params.ea = payload.cmd;
+          ga_params.el = payload.utterance;
+          gaVisitor.event(ga_params).send();
         }
 
         if(payload.cmd != FOXY_COMMANDS.NEXTSLIDE || 
@@ -258,12 +284,18 @@ function cleanSpeech(payload) {
   return final;
 }
 
-function parseAIBody(aiBody) {
+function parseAIBody(aiBody, theUtterance) {
   let jsonBody = JSON.parse(aiBody);
   var payload = {
     cmd: 'none',
     param: 'none',
     param2: 'none',
+  };
+
+  var ga_params = {
+    ec: foxycmd,
+    uid: gUuid,
+    cd1: gUuid
   };
 
   logger.debug(aiBody);
@@ -280,8 +312,11 @@ function parseAIBody(aiBody) {
       payload.param = parseTimer(jsonBody.result);
       payload.param2 = jsonBody.result.parameters.any;
 
-      gaVisitor.event(foxycmd, payload.cmd, payload.param2, 
-        payload.param).send();
+      ga_params.ea = payload.cmd;
+      ga_params.el = payload.param2;
+      ga_params.ev = payload.param;
+      
+      gaVisitor.event(ga_params).send();
       
       break;
     case 'play':
@@ -295,7 +330,9 @@ function parseAIBody(aiBody) {
       break;
     case 'pocket':
       payload.cmd = FOXY_COMMANDS.POCKET;
-      gaVisitor.event(foxycmd, payload.cmd, 'add').send();
+      ga_params.ea = payload.cmd;
+      ga_params.el = 'add';
+      gaVisitor.event(ga_params).send();
       break;
     case 'nextslide':
       payload.cmd = FOXY_COMMANDS.NEXTSLIDE;
@@ -307,11 +344,15 @@ function parseAIBody(aiBody) {
       break;
     case 'npr':
       payload.cmd = FOXY_COMMANDS.NPR;
-      gaVisitor.event(foxycmd, payload.cmd).send();
+      ga_params.ea = payload.cmd;
+      gaVisitor.event(ga_params).send();
       break;
     case 'feedback':
       payload.cmd = FOXY_COMMANDS.FEEDBACK;
-      gaVisitor.event(foxycmd, payload.cmd).send();
+      ga_params.ea = payload.cmd;
+      ga_params.el = theUtterance;
+      
+      gaVisitor.event(ga_params).send();
       break;
     default:
       payload.cmd = FOXY_COMMANDS.NONE;
