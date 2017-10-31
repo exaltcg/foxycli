@@ -15,7 +15,7 @@ class Timezone {
       const data = JSON.parse(response);
       console.log(data.rawOffset);
       const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-      const date = new Date(utc + data.rawOffset * 1000);
+      const date = new Date(utc + data.rawOffset * 1000 + data.dstOffset * 1000);
       const hours = ('0' + date.getHours()).slice(-2);
       return {
         time: `${hours}:${date.getMinutes()}`,
