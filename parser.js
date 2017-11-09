@@ -358,6 +358,10 @@ function parseAIBody(aiBody, theUtterance) {
       payload.cmd = FOXY_COMMANDS.SCREENSHOT;
       ga_params.ea = payload.cmd;
       ga_params.el = theUtterance;
+      break;
+    case 'shutup':
+      payload.cmd = FOXY_COMMANDS.SHUTUP;
+      ga_params.ea = payload.cmd;
       gaVisitor.event(ga_params).send();
       break;
     default:
