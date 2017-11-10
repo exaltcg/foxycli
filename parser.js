@@ -44,7 +44,8 @@ const FOXY_COMMANDS = {
   'POCKET': 'POCKET',
   'NPR': 'NPR',
   'GA': 'GA',
-  'FEEDBACK': 'FEEDBACK'
+  'FEEDBACK': 'FEEDBACK',
+  'SCREENSHOT': 'SCREENSHOT'
 };
 
 const asrOptions = {
@@ -351,6 +352,12 @@ function parseAIBody(aiBody, theUtterance) {
       ga_params.ea = payload.cmd;
       ga_params.el = theUtterance;
       
+      gaVisitor.event(ga_params).send();
+      break;
+    case 'screenshot':
+      payload.cmd = FOXY_COMMANDS.SCREENSHOT;
+      ga_params.ea = payload.cmd;
+      ga_params.el = theUtterance;
       gaVisitor.event(ga_params).send();
       break;
     default:
